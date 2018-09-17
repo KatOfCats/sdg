@@ -41,7 +41,8 @@ std::function<unsigned()> enqueue_thread(void* ctx, unsigned int id)
     }
     return 0;
 }
-std::function<unsigned()> dequeue_thread(void* ctx, unsigned int id) {
+std::function<unsigned()> dequeue_thread(void* ctx, unsigned int id)
+{
     queue_t& queue = *(queue_t*)ctx;
     int data;
 

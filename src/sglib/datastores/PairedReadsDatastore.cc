@@ -38,6 +38,7 @@ void PairedReadsDatastore::build_from_fastq(std::string read1_filename,std::stri
     output.write((const char *) &readsize,sizeof(readsize));
     auto size_pos=output.tellp();
     output.write((const char *) &_size, sizeof(_size));//just to save the space!
+    readpos_offset=output.tellp();
     while (!feof(fd1) and !feof(fd2)) {
 
         if (NULL == fgets(readbuffer, 2999, fd1)) continue;
@@ -98,6 +99,7 @@ void PairedReadsDatastore::build_from_fastq(std::string read1_filename,std::stri
     _size=pairs*2;
     output.seekp(size_pos);
     output.write((const char *) &_size, sizeof(_size));
+    output.flush();
     output.close();
     //DONE!
     sglib::OutputLog(sglib::LogLevels::INFO)<<discarded<<" pairs discarded due to short reads"<<std::endl;

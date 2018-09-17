@@ -31,16 +31,20 @@ interpreted as representing official policies, either expressed or implied, of D
 #include <cstdlib>
 #include <atomic>
 #include <cassert>
+#include <condition_variable>
 
 template<typename T>
 class MPMCBoundedQueue
 {
+    std::condition_variable done;
+
     struct cell_t
     {
         std::atomic<size_t>     sequence_;
         T                       data_;
     };
 public:
+    std::atomic<unsigned int> num_writers{0};
     MPMCBoundedQueue(size_t buffer_size)
             : buffer_(new cell_t [buffer_size])
             , buffer_mask_(buffer_size - 1)
@@ -106,6 +110,15 @@ public:
         data = cell->data_;
         cell->sequence_.store(pos + buffer_mask_ + 1, std::memory_order_release);
 
+        return true;
+    }
+
+    bool empty() {
+        if (num_writers > 0) return false;
+        size_t enqpos = enqueue_pos_.load(std::memory_order_relaxed);
+        size_t deqpos = dequeue_pos_.load(std::memory_order_relaxed);
+
+        if (enqpos != deqpos) return false;
         return true;
     }
 
