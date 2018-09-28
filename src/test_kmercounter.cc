@@ -6,7 +6,7 @@
 
 
 int main(int argc, char * argv[]) {
-    KmerCounter kmerCounter(12);
+    KmerCounter kmerCounter(21);
     std::vector<PairedReadsDatastore> datastores;
     //PE_R1_1M
 //    PairedReadsDatastore prds("../tests/datasets/dbg_test/R1.fastq", "../tests/datasets/dbg_test/R2.fastq", "test.prds");

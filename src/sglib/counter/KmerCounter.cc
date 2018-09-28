@@ -4,6 +4,7 @@
 
 #include <map>
 #include <sglib/processors/KmerCompressionIndex.hpp>
+#include <random>
 #include "KmerCounter.hpp"
 
 void KmerCounter::processReads(std::vector<PairedReadsDatastore> &read_files, bool sequential) {
@@ -25,14 +26,12 @@ void KmerCounter::processReads(std::vector<PairedReadsDatastore> &read_files, bo
 }
 
 void KmerCounter::processBins(BinBufferWriterQueue &wrt_queue) {
-    wrt_queue.num_writers++;
     while (!wrt_queue.empty()) {
         // Get largest bin
         auto max_bin = wrt_queue.getMaxBin();
         // Write and pop
         if (max_bin) wrt_queue.write_bin(max_bin);
     }
-    wrt_queue.num_writers--;
 }
 
 
@@ -199,7 +198,6 @@ void KmerCounter::processReadsSmallKSequential(std::vector<PairedReadsDatastore>
 
 
 
-
 void KmerCounter::read_file_large_k(const PairedReadsDatastore &ds, BinBufferWriterQueue &wrt_queue, int thread_id) {
 
     auto bpsg=BufferedPairedSequenceGetter(ds,128*1024,ds.readsize*2+2);
@@ -213,28 +211,35 @@ void KmerCounter::read_file_large_k(const PairedReadsDatastore &ds, BinBufferWri
     auto last_read = 1+( (thread_id+1)*ds.size()/num_datastore_readers);
     uint64_t rid;
     kmer_chunks.num_writers++;
-
+    wrt_queue.num_writers++;
     for (rid = first_read; rid < last_read and rid <= ds.size(); ++rid) {
         readkmers.clear();
         auto read_sequence = bpsg.get_read_sequence(rid);
 
         // Produce the minimiser based super-kmers
         make_minimiser_send_to_bin(read_sequence, wrt_queue.bins, this_thread_reads_2bit);
-
-        // Insert in the min bin queue
-        while(!kmer_chunks.enqueue(insertKmers)) {
-            std::this_thread::yield();
-        }
     }
     total_reads_kmerised+=reads_kmerised;
     total_kmers_produced+=kmers_produced;
     kmer_chunks.num_writers--;
+    wrt_queue.num_writers--;
 }
 
 void KmerCounter::processReadsLargeK(std::vector<PairedReadsDatastore> &read_files) {
 
-    BinBufferWriterQueue wrt_queue(512);
-    for (int i = 0; i < n_bins; i++) {
+    {
+        for (const auto &r: read_files) {
+            std::thread th(&KmerCounter::mmer_table_initialiser, this, std::ref(r), std::ref(mmer_table));
+            kmer_dist_generators.push_back(std::move(th));
+        }
+
+        for (auto &f: kmer_dist_generators) {
+            if (f.joinable()) f.join();
+        }
+    }
+    mmer_table.calcBins();
+    BinBufferWriterQueue wrt_queue(n_bins + 1);
+    for (int i = 0; i < n_bins+1; i++) {
         wrt_queue.bins.emplace_back(i, K, wrt_queue, 32*1024);
     }
 
@@ -244,7 +249,7 @@ void KmerCounter::processReadsLargeK(std::vector<PairedReadsDatastore> &read_fil
             kmer_producers.push_back(std::move(th));
         }
 
-        usleep(250);
+        usleep(500);
 
         for (int i = 0; i < num_bin_writers; i++) {
             std::thread th(&KmerCounter::processBins, this, std::ref(wrt_queue));
@@ -262,6 +267,106 @@ void KmerCounter::processReadsLargeK(std::vector<PairedReadsDatastore> &read_fil
     }
 }
 
+void KmerCounter::mmer_table_initialiser(const PairedReadsDatastore &ds, MinimiserTable &minimiserTable) {
+    auto bpsg=BufferedPairedSequenceGetter(ds,4*1024,ds.readsize*2+2);
+    std::default_random_engine generator;
+    std::uniform_int_distribution<uint32_t> distribution(1,ds.size());
+    MinimiserTable local_minimiser_table(signature_len, n_bins);
+    uint64_t total_mmers_seen{0};
+    for (unsigned int r = 1; r < ds.size()*0.05; r++) {
+        auto rid = distribution(generator);
+        auto seq = Seq2bit(std::string(bpsg.get_read_sequence(rid)));
+
+        Mmer current_mmer(signature_len), end_mmer(signature_len);
+
+        uint32_t i = 0;
+        uint32_t len = 0;//length of extended kmer
+
+        while (i + K - 1 < seq.size())
+        {
+            bool contains_N = false;
+            //building first signature after 'N' or at the read begining
+            for (uint32_t j = 0; j < signature_len; ++j, ++i)
+                if (seq[i] > 3)//'N'
+                {
+                    contains_N = true;
+                    break;
+                }
+            //signature must be shorter than k-mer so if signature contains 'N', k-mer will contains it also
+            if (contains_N)
+            {
+                ++i;
+                continue;
+            }
+            len = signature_len;
+            auto signature_start_pos = i - signature_len;
+            current_mmer.insert(seq.data() + signature_start_pos);
+            end_mmer.set(current_mmer);
+            for (; i < seq.size(); ++i)
+            {
+                if (seq[i] > 3)//'N'
+                {
+                    if (len >= K) {
+                        total_mmers_seen+= 1+len-K;
+                        local_minimiser_table[current_mmer.get()] += 1 + len - K;
+                    }
+                    len = 0;
+                    ++i;
+                    break;
+                }
+                end_mmer.insert(seq[i]);
+                if (end_mmer < current_mmer)//signature at the end of current k-mer is lower than current
+                {
+                    if (len >= K)
+                    {
+                        total_mmers_seen+= 1+len-K;
+                        local_minimiser_table[current_mmer.get()] += 1 + len - K;
+                        len = K - 1;
+                    }
+                    current_mmer.set(end_mmer);
+                    signature_start_pos = i - signature_len + 1;
+                }
+                else if (end_mmer == current_mmer)
+                {
+                    current_mmer.set(end_mmer);
+                    signature_start_pos = i - signature_len + 1;
+                }
+                else if (signature_start_pos + K - 1 < i)//need to find new signature
+                {
+                    total_mmers_seen+= 1+len-K;
+                    local_minimiser_table[current_mmer.get()] += 1 + len - K;
+                    len = K - 1;
+                    //looking for new signature
+                    ++signature_start_pos;
+                    //building first signature in current k-mer
+                    end_mmer.insert(seq.data() + signature_start_pos);
+                    current_mmer.set(end_mmer);
+                    for (uint32_t j = signature_start_pos + signature_len; j <= i; ++j)
+                    {
+                        end_mmer.insert(seq[j]);
+                        if (end_mmer <= current_mmer)
+                        {
+                            current_mmer.set(end_mmer);
+                            signature_start_pos = j - signature_len + 1;
+                        }
+                    }
+                }
+                ++len;
+            }
+        }
+        if (len >= K) {//last one in read
+            total_mmers_seen+= 1+len-K;
+            local_minimiser_table[current_mmer.get()] += 1 + len - K;
+        }
+    }
+
+    {
+        std::lock_guard<std::mutex> lg(mmer_table_lock);
+        minimiserTable.combine(local_minimiser_table);
+    }
+
+}
+
 void KmerCounter::make_minimiser_send_to_bin(std::string in_seq, std::vector<ExtendedKmerBin> &bins,
                                              std::list<Seq2bit> &reads_2bit) {
     int i = 0;
@@ -270,7 +375,7 @@ void KmerCounter::make_minimiser_send_to_bin(std::string in_seq, std::vector<Ext
     Mmer current_mmer(signature_len), end_mmer(signature_len);
     reads_2bit.emplace_back(Seq2bit(in_seq));
     auto& seq = reads_2bit.back();
-    while (in_seq[i]!='\0')
+    while (in_seq[i]!='\0' and i + K - 1 < in_seq.size())
     {
         bool contains_N = false;
         //building first signature after 'N' or at the read begining
@@ -290,26 +395,26 @@ void KmerCounter::make_minimiser_send_to_bin(std::string in_seq, std::vector<Ext
         auto signature_start_pos = i - signature_len;
         current_mmer.insert(reads_2bit.back().data()+signature_start_pos);
         end_mmer.set(current_mmer);
-        for (; in_seq[i]!='\0'; ++i)
+        for (; i < in_seq.size(); ++i)
         {
             if (seq[i] > 3)//'N'
             {
                 if (len >= K)
                 {
                     bin_no = mmer_table.get_bin_id(current_mmer.get());
-                    bins[bin_no].store_superkmer(reads_2bit.back().data() + i - len, len);
+                    bins[bin_no].store_superkmer(reads_2bit.back(),i - len, len);
                 }
                 len = 0;
                 ++i;
                 break;
             }
-            end_mmer.insert(reads_2bit.back().data()+i);
+            end_mmer.insert(reads_2bit.back().data()[i]);
             if (end_mmer < current_mmer)//signature at the end of current k-mer is lower than current
             {
                 if (len >= K)
                 {
                     bin_no = mmer_table.get_bin_id(current_mmer.get());
-                    bins[bin_no].store_superkmer(reads_2bit.back().data() + i - len, len);
+                    bins[bin_no].store_superkmer(reads_2bit.back(), i - len, len);
                     len = K - 1;
                 }
                 current_mmer.set(end_mmer);
@@ -323,7 +428,7 @@ void KmerCounter::make_minimiser_send_to_bin(std::string in_seq, std::vector<Ext
             else if (signature_start_pos + K - 1 < i)//need to find new signature
             {
                 bin_no = mmer_table.get_bin_id(current_mmer.get());
-                bins[bin_no].store_superkmer(reads_2bit.back().data() + i - len, len);
+                bins[bin_no].store_superkmer(reads_2bit.back(), i - len, len);
                 len = K - 1;
                 //looking for new signature
                 ++signature_start_pos;
@@ -332,7 +437,7 @@ void KmerCounter::make_minimiser_send_to_bin(std::string in_seq, std::vector<Ext
                 current_mmer.set(end_mmer);
                 for (uint32_t j = signature_start_pos + signature_len; j <= i; ++j)
                 {
-                    end_mmer.insert(reads_2bit.back().data()+j);
+                    end_mmer.insert(reads_2bit.back().data()[j]);
                     if (end_mmer <= current_mmer)
                     {
                         current_mmer.set(end_mmer);
@@ -344,7 +449,7 @@ void KmerCounter::make_minimiser_send_to_bin(std::string in_seq, std::vector<Ext
             if (len == K + 255) //one byte is used to store counter of additional symbols in extended k-mer
             {
                 bin_no = mmer_table.get_bin_id(current_mmer.get());
-                bins[bin_no].store_superkmer(reads_2bit.back().data() + i + 1 - len, len);
+                bins[bin_no].store_superkmer(reads_2bit.back(), i + 1 - len, len);
                 i -= K - 2;
                 len = 0;
                 break;
@@ -355,7 +460,7 @@ void KmerCounter::make_minimiser_send_to_bin(std::string in_seq, std::vector<Ext
     if (len >= K)//last one in read
     {
         bin_no = mmer_table.get_bin_id(current_mmer.get());
-        bins[bin_no].store_superkmer(seq.data() + i - len, len);
+        bins[bin_no].store_superkmer(seq, i - len, len);
     }
 
 }
@@ -431,3 +536,14 @@ void KmerCounter::LBprocess_kmers(int thread_id) {
     }
     total_reads_processed += chunks_processed;
 }
+
+constexpr std::array<char,256> Seq2bit::codes;
+uint32_t Mmer::norm5[];
+uint32_t Mmer::norm6[];
+uint32_t Mmer::norm7[];
+uint32_t Mmer::norm8[];
+uint32_t Mmer::norm9[];
+uint32_t Mmer::norm10[];
+uint32_t Mmer::norm11[];
+
+Mmer::_si Mmer::_init;
