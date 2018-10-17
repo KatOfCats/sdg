@@ -19,6 +19,7 @@ void KmerCounter::processReads(std::vector<PairedReadsDatastore> &read_files, bo
  }
 
     std::cout << "\n\n";
+    std::cout << "Total no. of nts: " << total_nts << "\n";
     std::cout << "Total no. of reads: " << total_reads_kmerised << "\n";
     std::cout << "Total no. of reads processed: " << total_reads_processed << "\n";
     std::cout << "Total no. of k-mers: " << total_kmers_produced << "\n";
@@ -199,29 +200,34 @@ void KmerCounter::processReadsSmallKSequential(std::vector<PairedReadsDatastore>
 
 
 void KmerCounter::read_file_large_k(const PairedReadsDatastore &ds, BinBufferWriterQueue &wrt_queue, int thread_id) {
-
+    wrt_queue.num_writers++;
+    std::vector<ExtendedKmerBin> bins;
+    for (int bin=0; bin <= n_bins; bin++) {
+        bins.emplace_back(bin, K, wrt_queue, 64*1024);
+    }
     auto bpsg=BufferedPairedSequenceGetter(ds,128*1024,ds.readsize*2+2);
     std::vector<Kmer> readkmers;
     StringKMerFactory skf(K);
     uint64_t reads_kmerised(0);
     uint64_t kmers_produced(0);
-    KmerArray insertKmers;
     std::list<Seq2bit> this_thread_reads_2bit;
     auto first_read = 1+(thread_id*ds.size()/num_datastore_readers);
     auto last_read = 1+( (thread_id+1)*ds.size()/num_datastore_readers);
     uint64_t rid;
-    kmer_chunks.num_writers++;
-    wrt_queue.num_writers++;
     for (rid = first_read; rid < last_read and rid <= ds.size(); ++rid) {
         readkmers.clear();
         auto read_sequence = bpsg.get_read_sequence(rid);
 
         // Produce the minimiser based super-kmers
-        make_minimiser_send_to_bin(read_sequence, wrt_queue.bins, this_thread_reads_2bit);
+        make_minimiser_send_to_bin(read_sequence, bins, this_thread_reads_2bit);
     }
-    total_reads_kmerised+=reads_kmerised;
-    total_kmers_produced+=kmers_produced;
-    kmer_chunks.num_writers--;
+
+    for (auto& bin : bins) {
+        bin.flush();
+        total_kmers_produced += bin.total_kmers;
+        total_reads_processed += bin.total_super_kmers;
+    }
+    total_reads_kmerised+= last_read-first_read;
     wrt_queue.num_writers--;
 }
 
@@ -239,9 +245,6 @@ void KmerCounter::processReadsLargeK(std::vector<PairedReadsDatastore> &read_fil
     }
     mmer_table.calcBins();
     BinBufferWriterQueue wrt_queue(n_bins + 1);
-    for (int i = 0; i < n_bins+1; i++) {
-        wrt_queue.bins.emplace_back(i, K, wrt_queue, 32*1024);
-    }
 
     for (const auto &r: read_files) {
         for (int i = 0; i < num_datastore_readers; i++) {
@@ -249,21 +252,129 @@ void KmerCounter::processReadsLargeK(std::vector<PairedReadsDatastore> &read_fil
             kmer_producers.push_back(std::move(th));
         }
 
-        usleep(500);
-
         for (int i = 0; i < num_bin_writers; i++) {
             std::thread th(&KmerCounter::processBins, this, std::ref(wrt_queue));
             kmer_bin_writers.push_back(std::move(th));
         }
+    }
 
-        for (auto &f: kmer_producers){
-            if (f.joinable()) f.join();
+    for (auto &f: kmer_producers){
+        if (f.joinable()) f.join();
+    }
+
+    for (auto &f: kmer_bin_writers){
+        if (f.joinable()) f.join();
+    }
+
+    wrt_queue.flush();
+
+
+    uint64_t total_kmers{0};
+    uint64_t total_superkmers{0};
+    for (const auto& bd : wrt_queue.bin_desc) {
+        std::cout << "Num kmers in bin: " << bd.n_rec << std::endl;
+        total_kmers +=bd.n_rec;
+        total_superkmers += bd.n_plus_x_recs;
+    }
+    std::cout << "Total kmers in bin_desc: " << total_kmers << std::endl;
+    // Load bins and sort them
+    for (int i = 1; i < n_bins; i++) {
+        // Read the whole bin
+        std::vector<unsigned char> buf(wrt_queue.bin_desc[i].size);
+        auto read_sz = std::fread(buf.data(), buf.size(), 1, wrt_queue.bin_files[i]);
+        if (read_sz < buf.size()) {
+            std::runtime_error("Error reading bin "+std::to_string(i));
         }
+        // Expand the bin, into new memory
+        std::vector<KmerCount> bin_kmers(wrt_queue.bin_desc[i].n_rec);
+        if (!bin_kmers.empty()) {
+            expand(buf, bin_kmers);
 
-        for (auto &f: kmer_bin_writers){
-            if (f.joinable()) f.join();
+            // Sort the bin
+            std::sort(bin_kmers.begin(), bin_kmers.end());
+            // Unique/Count the bin
+            auto wi = bin_kmers.begin();
+            auto ri = bin_kmers.begin();
+            while (ri < bin_kmers.end()) {
+                if (wi.base() == ri.base()) ++ri;
+                else if (*wi < *ri) {
+                    ++wi;
+                    *wi = *ri;
+                    ++ri;
+                }
+                else if (*wi == *ri) {
+                    wi->merge(*ri);
+                    ++ri;
+                }
+            }
         }
+        // TODO: Store the bin (Design a DB for it, partition based or hashtable based?)
+    }
+}
 
+
+void KmerCounter::expand(std::vector<unsigned char> &skmers_from_disk, std::vector<KmerCount> &kmerCounts_to_sort) {
+    uint64_t pos = 0;
+    KmerCount kmer_can;
+
+    uint32_t kmer_bytes = (K + 3) / 4;
+    uint32_t kmer_len_shift = (K - 1) * 2;
+    uint64_t kmer_mask; // TODO: Set ones to mask out non used bits from kmers
+    unsigned char *data_p = &skmers_from_disk[0];
+    uint64_t input_pos = 0;
+    int SIZE=1;
+    uint32_t kmer_shr = SIZE * 32 - K; // TODO: What is SIZE?!
+
+    unsigned char additional_symbols;
+
+    unsigned char symb;
+    while (pos < skmers_from_disk.size())
+    {
+        KmerCount kmer;
+        KmerCount rev_kmer;
+        additional_symbols = data_p[pos++];
+
+        // TODO: BUILD THE FW,RV KMERS
+        for (uint32_t i = 0, kmer_pos = 8 * SIZE - 1, kmer_rev_pos = 0; i < kmer_bytes; ++i, --kmer_pos, ++kmer_rev_pos)
+        {
+//            kmer.set_byte(kmer_pos, data_p[pos + i]);
+//            rev_kmer.set_byte(kmer_rev_pos, CRev_byte::lut[data_p[pos + i]]);
+        }
+        pos += kmer_bytes;
+        unsigned char byte_shift = 6 - (K % 4) * 2;
+        if (byte_shift != 6)
+            --pos;
+
+//        if (kmer_shr)
+//            kmer.SHR(kmer_shr);
+//
+//        kmer.mask(kmer_mask);
+//        rev_kmer.mask(kmer_mask);
+
+        kmer_can = kmer < rev_kmer ? kmer : rev_kmer;
+        kmerCounts_to_sort[input_pos] = kmer_can;
+        input_pos++;
+
+        for (int i = 0; i < additional_symbols; ++i)
+        {
+            symb = (data_p[pos] >> byte_shift) & 3;
+            if (byte_shift == 0)
+            {
+                ++pos;
+                byte_shift = 6;
+            }
+            else
+                byte_shift -= 2;
+//            kmer.SHL_insert_2bits(symb);
+//            kmer.mask(kmer_mask);
+//            rev_kmer.SHR_insert_2bits(3 - symb, kmer_len_shift);
+
+            kmer_can = kmer < rev_kmer ? kmer : rev_kmer;
+            kmerCounts_to_sort[input_pos] = kmer_can;
+            input_pos++;
+        }
+        if (byte_shift != 6)
+            ++pos;
     }
 }
 
@@ -273,7 +384,7 @@ void KmerCounter::mmer_table_initialiser(const PairedReadsDatastore &ds, Minimis
     std::uniform_int_distribution<uint32_t> distribution(1,ds.size());
     MinimiserTable local_minimiser_table(signature_len, n_bins);
     uint64_t total_mmers_seen{0};
-    for (unsigned int r = 1; r < ds.size()*0.05; r++) {
+    for (unsigned int r = 1; r < ds.size()*0.01; r++) {
         auto rid = distribution(generator);
         auto seq = Seq2bit(std::string(bpsg.get_read_sequence(rid)));
 

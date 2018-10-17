@@ -7,12 +7,16 @@
 void BinBufferWriterQueue::insert(int bin_no, std::vector<unsigned char> &buf, size_t len, uint32_t n_superkmers,
                                   uint32_t n_kmers) {
     std::lock_guard<std::mutex> lg(bin_mtx[bin_no]);
+    bin_desc[bin_no].n_rec+=n_kmers;
+    bin_desc[bin_no].n_plus_x_recs+=n_superkmers;
+    bin_desc[bin_no].size+=buf.size();
+
     if (bin_buffer_size[bin_no] > max_bin_size) {
         max_bin_size = bin_buffer_size[bin_no];
         max_bin = bin_no;
     }
     bin_buffer_size[bin_no]+=len;
-    std::vector<unsigned char> copy(buf);
+    std::vector<unsigned char> copy(buf.begin(), buf.begin()+len);
     bin_buffers[bin_no].push_back(copy);
 }
 
@@ -24,8 +28,8 @@ void BinBufferWriterQueue::write_bin(int bin_no) {
         std::copy(bbref.begin(), bbref.end(), std::back_inserter(buffer));
         bin_buffer_size[bin_no] -= buffer.size();
         bin_buffers[bin_no].pop_front();
-        std::copy(buffer.begin(), buffer.end(), std::ostream_iterator<unsigned char>(bin_files[bin_no]));
     }
+    if (!buffer.empty()) std::fwrite(&buffer[0], buffer.size(), 1, bin_files[bin_no]);
 
     bin_buffer_size[bin_no] = 0;
 
@@ -41,26 +45,27 @@ void BinBufferWriterQueue::write_bin(int bin_no) {
 }
 
 bool BinBufferWriterQueue::empty() {
-    if (num_writers > 0) return false;
-    if (max_bin>0) return false;
+    if (num_writers>0 or max_bin>0) return false;
     return true;
 }
 
 BinBufferWriterQueue::BinBufferWriterQueue(int num_bins) {
     std::vector<std::mutex> list(num_bins);
     bin_mtx.swap(list);
+    bin_desc.resize(num_bins);
     bin_buffers.resize(num_bins);
+    bin_files.resize(num_bins);
     for (int i = 0; i < num_bins; i++) {
         std::string name("file"+std::to_string(i)+".bin");
-        bin_files.emplace_back(name);
+        bin_files[i] = std::fopen(name.c_str(), "wb");
         bin_buffer_size.emplace_back(0);
     }
 }
 
 BinBufferWriterQueue::~BinBufferWriterQueue() {
-    // Make sure all bins are empty before closing the files and destroying all objects
-    for (int i = 0; i < bin_buffers.size(); i++) {
-        write_bin(i);
+    flush();
+    for (int i = 0; i<bin_files.size(); i++) {
+        std::fclose(bin_files[i]);
     }
 }
 
@@ -78,16 +83,12 @@ void ExtendedKmerBin::store_superkmer(const Seq2bit &seq, unsigned int offset, u
     uint32_t bytes = 1 + (len + 3) / 4;
     if(buffer_pos + bytes > buffer_size)
     {
-        flush();
-//            pmm_bins->reserve(buffer); // Here synchronizes for memory
-        buffer_pos		= 0;
-        n_kmers			= 0;
-        n_super_kmers		= 0;
+        flush(); // Maybe sync for mem here
     }
 
 
-    buffer[buffer_pos++] = static_cast<unsigned char>(len - K); // TODO: Check allocation
-    for(uint32_t i = 0, j = 0 ; i < len / 4 ; ++i,j+=4)
+    buffer[buffer_pos++] = static_cast<unsigned char>(len - K);
+    for(uint32_t i = 0, j = offset ; i < len / 4 ; ++i,j+=4)
         buffer[buffer_pos++] = (seq[j] << 6) + (seq[j + 1] << 4) + (seq[j + 2] << 2) + seq[j + 3];
     switch (len%4)
     {
@@ -108,6 +109,12 @@ void ExtendedKmerBin::store_superkmer(const Seq2bit &seq, unsigned int offset, u
 }
 
 void ExtendedKmerBin::flush() {
-    // Write buffer to output queue (sync)
+    total_kmers += n_kmers;
+    total_super_kmers += n_super_kmers;
+
+    // Write buffer to output queue (sync?)
     queue.insert(bin_no, buffer,buffer_pos, n_super_kmers, n_kmers);
+    buffer_pos		= 0;
+    n_kmers			= 0;
+    n_super_kmers		= 0;
 }

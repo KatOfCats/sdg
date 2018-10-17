@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <sglib/counter/KmerCounter.hpp>
-#include "sglib/logger/OutputLog.h"
+#include "sglib/logger/OutputLog.hpp"
 #include "cxxopts.hpp"
 
 

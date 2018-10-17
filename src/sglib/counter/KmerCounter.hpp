@@ -9,13 +9,14 @@
 #include <thread>
 #include <list>
 #include <numeric>
-#include <sglib/readers/FileReader.h>
+#include <sglib/readers/FileReader.hpp>
 #include <sglib/datastores/PairedReadsDatastore.hpp>
 #include <sglib/counter/LBQueue.hpp>
 #include "MPMCQueue.hpp"
 #include "ExtendedKmerBin.hpp"
 
 
+class KmerCount;
 class Mmer{
     uint32_t str;
     uint32_t mask;
@@ -199,6 +200,7 @@ public:
     unsigned int get_bin_id(unsigned int n) const {return bin_map[n];}
     uint32_t& operator[](const std::size_t i){return minimiser_table[i];};
 
+    //TODO: Make sure distribution is even
     void calcBins() {
         bin_map.resize(minimiser_table.size());
         std::fill(bin_map.begin(), bin_map.end(), 1);
@@ -292,23 +294,6 @@ public:
     }
 };
 
-/**
- * The members of this class are organised as follows:
- *      Processor
- *      Communication mechanism
- *      Processor
- *      Communication mechanism
- *      .
- *      .
- *      .
- *
- * The idea is to have the code represent the flow of the data through the pipeline,
- * the processors communicate using asynchronous operations over multi-producer multi-consumer
- * queues
- *
- * Finally the last step of the pipeline should write the kmers to a database of kmer-counts.
- */
-
 class KmerCounter {
     const uint8_t K;
     const uint8_t signature_len{5};
@@ -316,7 +301,6 @@ class KmerCounter {
     std::array<char,256> codes={4};
 
     int num_datastore_readers{2};
-    int num_kmer_splitters{1};
     int num_bin_writers{6};
 
     int num_smallK_counters{2};
@@ -329,7 +313,6 @@ class KmerCounter {
     KmerArrayQueue LBkmer_chunks;
     MPMCBoundedQueue<KmerArray> kmer_chunks;
 
-    std::vector<std::thread> kmer_partitioners;
     std::vector<std::thread> kmer_counters;
     std::vector<std::thread> kmer_bin_writers;
 
@@ -338,6 +321,7 @@ class KmerCounter {
     std::atomic<uint64_t> total_reads_processed{0};
     std::atomic<uint64_t> total_reads_kmerised{0};
     std::atomic<uint64_t> total_kmers_produced{0};
+    std::atomic<uint64_t> total_nts{0};
 
     MinimiserTable mmer_table;
 
@@ -345,6 +329,7 @@ class KmerCounter {
     void read_file_large_k(const PairedReadsDatastore &r, BinBufferWriterQueue &wrt_queue, int thread_id);
     void count_small_k(int thread_id, std::vector<uint64_t> &smallK_counts);
 
+    void expand(std::vector<unsigned char> &skmers_from_disk, std::vector<KmerCount> &kmerCounts_to_sort);
     void LBread_file(PairedReadsDatastore &r, int thread_id);
     void LBprocess_kmers(int thread_id);
 public:
