@@ -7,9 +7,11 @@
 
 #include <cstdint>
 #include <cstring>
+#include <cmath>
 #include <stdexcept>
 #include <algorithm>
 #include <iostream>
+#include <sglib/hash/xxhash.h>
 
 class revcomp_DNA2 {
 public:
@@ -51,25 +53,28 @@ constexpr int GET_KMER_NELEMENTS(int b, int t) { return (b - 1) / t ; }
 // This is a class to hold the bits of a nucleotide
 // This class can represent sequences of any size and any alphabet
 // Kmers are represented in bits read from left to right
-// TODO: Check for endianness issues
+
+// TODO: Check for unnecessary copies when creating/updating KMER objects, and remove them!
 // FIXME: Check speed of "append" and "prepend" methods for fwd and rc creation vs fwd + RC(fwd)
+// FIXME: Add a hashing function for all NTBits size types
+
 template<
         int K,
         int B = GET_KMER_BYTES(K, 2),
         int T = GET_KMER_TYPE(B),
         int NELEMENTS = GET_KMER_NELEMENTS(B, T)>
-class NTBits {};
+class KMER {};
 
 template<int K, int B, int NELEMENTS>
-class NTBits<K, B, 8, NELEMENTS> {
+class KMER<K, B, 8, NELEMENTS> {
     static constexpr unsigned int BPN = 2;
     using T=uint64_t;
     static constexpr unsigned int MOD = BPN*K % std::numeric_limits<T>::digits;
     static constexpr unsigned int LBP1 = ( (MOD == 0) ? NELEMENTS-1 : NELEMENTS);
     static constexpr unsigned int LBP2 = ( (MOD == 0) ? std::numeric_limits<T>::digits-BPN : MOD - BPN);
-    T subparts[NELEMENTS+1];
+    std::array<T,NELEMENTS+1> subparts;
 public:
-    NTBits() {
+    KMER() {
         std::memset(&subparts, 0, (NELEMENTS+1)*sizeof(T));
     }
     T get() const { return this->subparts[0]; }
@@ -81,7 +86,7 @@ public:
         }
     }
 
-    inline void set(const NTBits &o) {
+    inline void set(const KMER &o) {
         for (int i = 0; i < NELEMENTS+1; i++) {
             this->subparts[i] = o.subparts[i];
         }
@@ -91,50 +96,50 @@ public:
         return static_cast<const size_t>(std::numeric_limits<T>::digits * NELEMENTS);
     }
 
-    inline NTBits operator|(const NTBits &o) const {
-        NTBits result;
+    inline KMER operator|(const KMER &o) const {
+        KMER result;
         for (int i = 0; i < NELEMENTS; i++)
             result.subparts[i] = this->subparts[i] | o.subparts[i];
         return result;
     }
 
-    inline NTBits &operator|=(const NTBits &o) {
+    inline KMER &operator|=(const KMER &o) {
         for (int i = 0; i < NELEMENTS; i++) { this->subparts[i] |= o.subparts[i]; }
         return *this;
     }
 
-    inline NTBits &operator|=(const int &o) {
+    inline KMER &operator|=(const int &o) {
         subparts[0] |= o;
         return *this;
     }
 
-    inline NTBits operator&(const int &o) const {
-        NTBits result;
+    inline KMER operator&(const int &o) const {
+        KMER result;
         result.subparts[0] = subparts[0] & o;
         return result;
     }
 
-    inline NTBits operator&(const NTBits &o) const {
-        NTBits result;
+    inline KMER operator&(const KMER &o) const {
+        KMER result;
         for (int i = 0; i < NELEMENTS; i++)
             result.subparts[i] = this->subparts[i] & o.subparts[i];
         return result;
     }
 
-    inline NTBits &operator&=(const NTBits &o) {
+    inline KMER &operator&=(const KMER &o) {
         for (int i = 0; i < NELEMENTS; i++) { this->subparts[i] &= o.subparts[i]; }
         return *this;
     }
 
-    inline NTBits operator~() const {
-        NTBits result;
+    inline KMER operator~() const {
+        KMER result;
         for (int i = 0; i < NELEMENTS; i++)
             result.subparts[i] = ~this->subparts[i];
         return result;
     }
 
-    inline NTBits operator<<(const int &dist_to_push) const {
-        NTBits result;
+    inline KMER operator<<(const int &dist_to_push) const {
+        KMER result;
         result.set(0);
 
         int large_shift = dist_to_push / std::numeric_limits<T>::digits;
@@ -152,15 +157,15 @@ public:
         return result;
     }
 
-    inline NTBits &operator<<=(const int &dist_to_push) {
+    inline KMER &operator<<=(const int &dist_to_push) {
         if (IsZero() || dist_to_push == 0) return *this;
 
         *(this) = (*this) << dist_to_push;
         return *this;
     }
 
-    inline NTBits operator>>(const int &dist_to_push) const {
-        NTBits result;
+    inline KMER operator>>(const int &dist_to_push) const {
+        KMER result;
         result.set(0);
 
         int large_shift (dist_to_push / std::numeric_limits<T>::digits);
@@ -179,28 +184,28 @@ public:
         return result;
     }
 
-    inline NTBits &operator>>=(const int &dist_to_push) {
+    inline KMER &operator>>=(const int &dist_to_push) {
         if (IsZero() || dist_to_push == 0) return *this;
 
         *(this) = (*this) >> dist_to_push;
         return *this;
     }
 
-    inline bool operator!=(const NTBits &o) const {
+    inline bool operator!=(const KMER &o) const {
         for (int i = 0; i < NELEMENTS; i++)
             if (this->subparts[i] != o.subparts[i])
                 return true;
         return false;
     }
 
-    inline bool operator==(const NTBits &o) const {
+    inline bool operator==(const KMER &o) const {
         for (int i = 0; i < NELEMENTS; i++)
             if (this->subparts[i] != o.subparts[i])
                 return false;
         return true;
     }
 
-    inline bool operator<(const NTBits &o) const {
+    inline bool operator<(const KMER &o) const {
         for (int i = NELEMENTS - 1; i >= 0; --i)
             if (this->subparts[i] != o.subparts[i])
                 return this->subparts[i] < o.subparts[i];
@@ -208,7 +213,7 @@ public:
         return false;
     }
 
-    inline bool operator<=(const NTBits &o) const {
+    inline bool operator<=(const KMER &o) const {
         return operator==(o) || operator<(o);
     }
 
@@ -231,13 +236,13 @@ public:
         add(c);
     }
 
-    inline NTBits& RC() {
+    inline KMER& RC() {
         *(this) = revcomp(*this);
         return *this;
     }
 
-    inline NTBits revcomp(const NTBits &x) {
-        NTBits res;
+    inline KMER revcomp(const KMER &x) {
+        KMER res;
         res.set(0);
         auto *kmerrev = (unsigned char *) (&(res.subparts[0]));
         auto *kmer = (unsigned char *) (&(x.subparts[0]));
@@ -263,7 +268,7 @@ public:
 
     inline std::string toString() const {
         std::string result;
-        NTBits cp;
+        KMER cp;
         cp.set(*this);
         result.resize(K);
         T tmp;
@@ -276,10 +281,14 @@ public:
         }
         return result;
     }
+
+    inline uint64_t hash() const {
+        return subparts[0];
+    }
 };
 
 template<int K, int B>
-class NTBits<K, B, 8, 0> {
+class KMER<K, B, 8, 0> {
     static const unsigned int BPN = 2;
     using T=uint64_t;
     static constexpr unsigned int LBP = BPN*K % std::numeric_limits<T>::digits - BPN;
@@ -291,81 +300,81 @@ public:
         this->subparts = val;
     }
 
-    inline void set(const NTBits &o) {
+    inline void set(const KMER &o) {
         this->subparts = o.subparts;
     }
 
     static inline const size_t getSize() { return static_cast<const size_t>(std::numeric_limits<T>::digits); }
 
-    inline NTBits operator|(const NTBits &o) const {
-        NTBits result;
+    inline KMER operator|(const KMER &o) const {
+        KMER result;
         result.subparts = this->subparts | o.subparts;
         return result;
     }
 
-    inline NTBits &operator|=(const NTBits &o) {
+    inline KMER &operator|=(const KMER &o) {
         this->subparts |= o.subparts;
         return *this;
     }
 
-    inline NTBits operator&(const NTBits &o) const {
-        NTBits result;
+    inline KMER operator&(const KMER &o) const {
+        KMER result;
         result.subparts = this->subparts & o.subparts;
         return result;
     }
 
-    inline NTBits &operator&=(const NTBits &o) {
+    inline KMER &operator&=(const KMER &o) {
         this->subparts &= o.subparts;
         return *this;
     }
 
-    inline NTBits operator~() const {
-        NTBits result;
+    inline KMER operator~() const {
+        KMER result;
         result.subparts = ~this->subparts;
         return result;
     }
 
-    inline NTBits operator<<(const int &dist_to_push) const {
-        NTBits result;
+    inline KMER operator<<(const int &dist_to_push) const {
+        KMER result;
         result.subparts = result.subparts | (this->subparts << dist_to_push);
         return result;
     }
 
-    inline NTBits &operator<<=(const int &dist_to_push) {
+    inline KMER &operator<<=(const int &dist_to_push) {
         *(this) = (*this) << dist_to_push;
         return *this;
     }
 
-    inline NTBits operator>>(const int &dist_to_push) const {
-        NTBits result;
+    inline KMER operator>>(const int &dist_to_push) const {
+        KMER result;
         result.set(0);
 
         result.subparts = this->subparts >> dist_to_push;
         return result;
     }
 
-    inline NTBits &operator>>=(const int &dist_to_push) {
+    inline KMER &operator>>=(const int &dist_to_push) {
         *(this) = (*this) >> dist_to_push;
         return *this;
     }
 
-    inline bool operator!=(const NTBits &o) const {
+    inline bool operator!=(const KMER &o) const {
         if (this->subparts != o.subparts)
             return true;
         return false;
     }
 
-    inline bool operator==(const NTBits &o) const {
+    inline bool operator==(const KMER &o) const {
         if (this->subparts != o.subparts)
             return false;
         return true;
     }
 
-    inline bool operator<(const NTBits &o) const {
+    inline bool operator<(const KMER &o) const {
         return this->subparts < o.subparts;
     }
 
-    inline bool operator<=(const NTBits &o) const {
+    inline bool operator<=(const KMER &o) const {
         return this->subparts <= o.subparts;
     }
 
@@ -388,13 +397,13 @@ public:
         add(c);
     }
 
-    inline NTBits& RC() {
+    inline KMER& RC() {
         *this = revcomp(*this);
         return *this;
     }
 
-    inline NTBits revcomp(const NTBits &o) {
-        NTBits res;
+    inline KMER revcomp(const KMER &o) {
+        KMER res;
         res.set(0);
         T x = o.subparts;
 
@@ -424,10 +433,15 @@ public:
         }
         return result;
     }
+
+    inline uint64_t hash() const {
+        return subparts;
+    }
+
 };
 
 template<int K, int B>
-class NTBits<K, B, 4, 0> {
+class KMER<K, B, 4, 0> {
     static const unsigned int BPN = 2;
     using T=uint32_t;
     static constexpr unsigned int LBP = BPN*K % std::numeric_limits<T>::digits - BPN;
@@ -439,81 +453,81 @@ public:
         this->subparts = val;
     }
 
-    inline void set(const NTBits &o) {
+    inline void set(const KMER &o) {
         this->subparts = o.subparts;
     }
 
     static inline const size_t getSize() { return static_cast<const size_t>(std::numeric_limits<T>::digits); }
 
-    inline NTBits operator|(const NTBits &o) const {
-        NTBits result;
+    inline KMER operator|(const KMER &o) const {
+        KMER result;
         result.subparts = this->subparts | o.subparts;
         return result;
     }
 
-    inline NTBits &operator|=(const NTBits &o) {
+    inline KMER &operator|=(const KMER &o) {
         this->subparts |= o.subparts;
         return *this;
     }
 
-    inline NTBits operator&(const NTBits &o) const {
-        NTBits result;
+    inline KMER operator&(const KMER &o) const {
+        KMER result;
         result.subparts = this->subparts & o.subparts;
         return result;
     }
 
-    inline NTBits &operator&=(const NTBits &o) {
+    inline KMER &operator&=(const KMER &o) {
         this->subparts &= o.subparts;
         return *this;
     }
 
-    inline NTBits operator~() const {
-        NTBits result;
+    inline KMER operator~() const {
+        KMER result;
         result.subparts = ~this->subparts;
         return result;
     }
 
-    inline NTBits operator<<(const int &dist_to_push) const {
-        NTBits result;
+    inline KMER operator<<(const int &dist_to_push) const {
+        KMER result;
         result.subparts = result.subparts | (this->subparts << dist_to_push);
         return result;
     }
 
-    inline NTBits &operator<<=(const int &dist_to_push) {
+    inline KMER &operator<<=(const int &dist_to_push) {
         *(this) = (*this) << dist_to_push;
         return *this;
     }
 
-    inline NTBits operator>>(const int &dist_to_push) const {
-        NTBits result;
+    inline KMER operator>>(const int &dist_to_push) const {
+        KMER result;
         result.set(0);
 
         result.subparts = this->subparts >> dist_to_push;
         return result;
     }
 
-    inline NTBits &operator>>=(const int &dist_to_push) {
+    inline KMER &operator>>=(const int &dist_to_push) {
         *(this) = (*this) >> dist_to_push;
         return *this;
     }
 
-    inline bool operator!=(const NTBits &o) const {
+    inline bool operator!=(const KMER &o) const {
         if (this->subparts != o.subparts)
             return true;
         return false;
     }
 
-    inline bool operator==(const NTBits &o) const {
+    inline bool operator==(const KMER &o) const {
         if (this->subparts != o.subparts)
             return false;
         return true;
     }
 
-    inline bool operator<(const NTBits &o) const {
+    inline bool operator<(const KMER &o) const {
         return this->subparts < o.subparts;
     }
 
-    inline bool operator<=(const NTBits &o) const {
+    inline bool operator<=(const KMER &o) const {
         return this->subparts <= o.subparts;
     }
 
@@ -538,13 +552,13 @@ public:
     }
 
 
-    inline NTBits& RC() {
+    inline KMER& RC() {
         *this = revcomp(*this);
         return *this;
     }
 
-    inline NTBits revcomp(const NTBits &o) {
-        NTBits res;
+    inline KMER revcomp(const KMER &o) {
+        KMER res;
         res.set(0);
         T x = o.subparts;
 
@@ -571,6 +585,10 @@ public:
             result[K - 1 - i] = "ACGT"[cp >> (i * BPN) & 3];
         }
         return result;
+    }
+
+    inline uint64_t hash() const {
+        return subparts;
     }
 
 };

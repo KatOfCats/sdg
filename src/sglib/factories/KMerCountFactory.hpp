@@ -8,6 +8,7 @@
 #include <vector>
 #include <limits>
 #include <tuple>
+#include <sglib/types/Kmer.hpp>
 #include "sglib/factories/KMerFactory.hpp"
 struct KmerCountFactoryParams {
     uint8_t k;
@@ -44,8 +45,18 @@ struct KmerCount {
         return {};
     }
 
+    void addByte(unsigned char byte) {
+        kmer = kmer<<8;
+        kmer |= byte;
+    }
+    void addNt(unsigned char nt) {
+        kmer = kmer << 2;
+        kmer |= nt;
+    }
+
+
     friend std::ostream& operator<<(std::ostream& os, const KmerCount& kmer) {
-        os << kmer.kmer << "\t" << kmer.count;
+//        os << kmer.kmer << "\t" << kmer.count;
         return os;
     }
 
@@ -62,6 +73,64 @@ struct KmerCount {
     };
 
 };
+struct KmerCount64 {
+    KmerCount64() : kmer(~__uint128_t(0)), count(0) {}
+    explicit KmerCount64(__uint128_t kmer) : kmer(kmer), count(0) {}
+    KmerCount64(__uint128_t _kmer, uint8_t _count) : kmer(_kmer), count(_count) {}
+
+    const bool operator<(const KmerCount64& other) const {
+        return kmer<other.kmer;
+    }
+
+    const bool operator>(const KmerCount64 &other) const {
+        return kmer>other.kmer;
+    }
+
+    const bool operator==(const KmerCount64 &other) const {
+        return kmer==other.kmer;
+    }
+
+    // http://locklessinc.com/articles/sat_arithmetic
+    void merge(const KmerCount64 &other) {
+        uint8_t res = count + other.count;
+        res |= -(res < count);
+
+        count = res;
+    }
+
+    KmerCount64 max() {
+        return {};
+    }
+
+    void addByte(unsigned char byte) {
+        kmer = kmer<<8;
+        kmer |= byte;
+    }
+    void addNt(unsigned char nt) {
+        kmer = kmer << 2;
+        kmer |= nt;
+    }
+
+
+    friend std::ostream& operator<<(std::ostream& os, const KmerCount64& kmer) {
+//        os << kmer.kmer << "\t" << kmer.count;
+        return os;
+    }
+
+    friend std::istream& operator>>(std::istream& is, const KmerCount64& kmer) {
+        is.read((char*)&kmer, sizeof(kmer));
+        return is;
+    }
+    __uint128_t kmer;
+    uint8_t count;
+    struct KmerCount64_hash {
+        size_t operator()(const KmerCount64& k) const {
+            return k.kmer;
+        }
+    };
+
+};
+
 
 template<typename FileRecord>
 class KmerCountFactory : protected KMerFactory {

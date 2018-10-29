@@ -24,11 +24,10 @@ class Seq2bit {
             };
 
 public:
-    Seq2bit(std::string seq);
+    Seq2bit(const std::string &seq);
     std::size_t size();
     unsigned char operator[](int i) const;
     unsigned char& operator[](int i);
-    void insert_nt(unsigned char nt);
     unsigned char* data();
 };
 

@@ -2,6 +2,8 @@
 // Created by Luis Yanes (EI) on 21/09/2018.
 //
 
+#include <iomanip>
+#include <sstream>
 #include "ExtendedKmerBin.hpp"
 
 void BinBufferWriterQueue::insert(int bin_no, std::vector<unsigned char> &buf, size_t len, uint32_t n_superkmers,
@@ -9,7 +11,7 @@ void BinBufferWriterQueue::insert(int bin_no, std::vector<unsigned char> &buf, s
     std::lock_guard<std::mutex> lg(bin_mtx[bin_no]);
     bin_desc[bin_no].n_rec+=n_kmers;
     bin_desc[bin_no].n_plus_x_recs+=n_superkmers;
-    bin_desc[bin_no].size+=buf.size();
+    bin_desc[bin_no].size+=len;
 
     if (bin_buffer_size[bin_no] > max_bin_size) {
         max_bin_size = bin_buffer_size[bin_no];
@@ -29,7 +31,10 @@ void BinBufferWriterQueue::write_bin(int bin_no) {
         bin_buffer_size[bin_no] -= buffer.size();
         bin_buffers[bin_no].pop_front();
     }
-    if (!buffer.empty()) std::fwrite(&buffer[0], buffer.size(), 1, bin_files[bin_no]);
+    if (!buffer.empty()) {
+        std::fwrite(&buffer[0], buffer.size(), 1, bin_files[bin_no]);
+        fflush(bin_files[bin_no]);
+    }
 
     bin_buffer_size[bin_no] = 0;
 
@@ -49,16 +54,29 @@ bool BinBufferWriterQueue::empty() {
     return true;
 }
 
-BinBufferWriterQueue::BinBufferWriterQueue(int num_bins) {
+BinBufferWriterQueue::BinBufferWriterQueue(int num_bins, bool loadParts) {
     std::vector<std::mutex> list(num_bins);
     bin_mtx.swap(list);
     bin_desc.resize(num_bins);
     bin_buffers.resize(num_bins);
     bin_files.resize(num_bins);
-    for (int i = 0; i < num_bins; i++) {
-        std::string name("file"+std::to_string(i)+".bin");
-        bin_files[i] = std::fopen(name.c_str(), "wb");
-        bin_buffer_size.emplace_back(0);
+    if (!loadParts) {
+        for (int i = 0; i < num_bins; i++) {
+            std::stringstream ss;
+            ss << "bin_" << std::setw(5) << std::setfill('0') << i << ".bin";
+            std::string name(ss.str());
+            bin_files[i] = std::fopen(name.c_str(), "w+b");
+            bin_buffer_size.emplace_back(0);
+        }
+
+    } else {
+        for (int i = 0; i < num_bins; i++) {
+            std::stringstream ss;
+            ss << "bin_" << std::setw(5) << std::setfill('0') << i << ".bin";
+            std::string name(ss.str());
+            bin_files[i] = std::fopen(name.c_str(), "rb");
+            bin_buffer_size.emplace_back(0);
+        }
     }
 }
 
@@ -66,6 +84,18 @@ BinBufferWriterQueue::~BinBufferWriterQueue() {
     flush();
     for (int i = 0; i<bin_files.size(); i++) {
         std::fclose(bin_files[i]);
+    }
+}
+
+void BinBufferWriterQueue::flush() {
+    std::ofstream partDesc("partDesc.txt");
+    // Make sure all bins are empty before closing the files and destroying all objects
+    for (int i = 0; i < bin_buffers.size(); i++) {
+        if (!bin_buffers[i].empty())
+            write_bin(i);
+        std::fflush(bin_files[i]);
+        std::rewind(bin_files[i]);
+        partDesc << i << "\t\t" << bin_desc[i].n_rec << "\t" << bin_desc[i].n_plus_x_recs << "\t" << bin_desc[i].size << "\t0\t0" << std::endl;
     }
 }
 
@@ -83,23 +113,24 @@ void ExtendedKmerBin::store_superkmer(const Seq2bit &seq, unsigned int offset, u
     uint32_t bytes = 1 + (len + 3) / 4;
     if(buffer_pos + bytes > buffer_size)
     {
-        flush(); // Maybe sync for mem here
+        flush();
     }
 
 
     buffer[buffer_pos++] = static_cast<unsigned char>(len - K);
+
     for(uint32_t i = 0, j = offset ; i < len / 4 ; ++i,j+=4)
         buffer[buffer_pos++] = (seq[j] << 6) + (seq[j + 1] << 4) + (seq[j + 2] << 2) + seq[j + 3];
     switch (len%4)
     {
         case 1:
-            buffer[buffer_pos++] = (seq[len-1] << 6);
+            buffer[buffer_pos++] = (seq[offset+len-1] << 6);
             break;
         case 2:
-            buffer[buffer_pos++] = (seq[len-2] << 6) + (seq[len-1] << 4);
+            buffer[buffer_pos++] = (seq[offset+len-2] << 6) + (seq[offset+len-1] << 4);
             break;
         case 3:
-            buffer[buffer_pos++] = (seq[len-3] << 6) + (seq[len-2] << 4) + (seq[len-1] << 2);
+            buffer[buffer_pos++] = (seq[offset+len-3] << 6) + (seq[offset+len-2] << 4) + (seq[offset+len-1] << 2);
             break;
         default:break;
     }

@@ -12,6 +12,7 @@
 #include <list>
 #include <fstream>
 #include <iterator>
+#include <iostream>
 #include "Seq2bit.hpp"
 
 /*
@@ -19,27 +20,6 @@
  */
 
 class ExtendedKmerBin;
-
-// TODO: Use this class instead of the vectors in BinBufferWriterQueue
-class BinBuffer{
-    int bin_id;
-    std::mutex bin_mtx;
-    std::list<std::vector<unsigned char>> bin_buffer;
-    int current_size;
-    std::ofstream bin_file;
-    uint64_t total_kmers;
-    uint64_t total_size;
-
-public:
-    BinBuffer(int id) : bin_id(id)
-    {
-        // Open file init
-        // Init buffer
-    }
-    void insert(std::vector<unsigned char> &buf, size_t len, uint32_t n_superkmers, uint32_t n_kmers) {}
-    void write_bin(){}
-
-};
 
 class BinInfo {
 public:
@@ -59,16 +39,16 @@ public:
 class BinBufferWriterQueue{
 
     std::vector<std::mutex> bin_mtx;                                   /// Lock per file/queue
-    std::vector<std::list<std::vector<unsigned char>>> bin_buffers;    /// Vector bin buffers *shared*
     std::vector<int> bin_buffer_size;                                  /// Current bin_no size
     std::atomic<unsigned int> max_bin{0};                              /// Largest buffer (0 represents empty or no bin)
     std::atomic<uint64_t> max_bin_size{0};                             /// Size of largest buffer
 
 public:
+    std::vector<std::list<std::vector<unsigned char>>> bin_buffers;    /// Vector bin buffers *shared*
     std::vector<BinInfo> bin_desc;
     std::vector<std::FILE*> bin_files;                              /// Files containing bins *shared*
     std::atomic<uint64_t> num_writers{0};
-    BinBufferWriterQueue(int num_bins);
+    BinBufferWriterQueue(int num_bins, bool loadParts);
 
     unsigned int getMaxBin() const { return max_bin; }
     void insert(int bin_no, std::vector<unsigned char> &buf, size_t len, uint32_t n_superkmers, uint32_t n_kmers);
@@ -77,14 +57,7 @@ public:
 
     bool empty();
 
-    void flush() {
-        // Make sure all bins are empty before closing the files and destroying all objects
-        for (int i = 0; i < bin_buffers.size(); i++) {
-            write_bin(i);
-            std::fflush(bin_files[i]);
-            std::rewind(bin_files[i]);
-        }
-    }
+    void flush();
 
     ~BinBufferWriterQueue();
 };
@@ -93,19 +66,20 @@ class ExtendedKmerBin {
     const uint8_t K;
     const uint16_t bin_no{0};
     unsigned int buffer_size;
-    unsigned int buffer_pos=0;
     unsigned int n_super_kmers{0};
     unsigned int n_kmers{0};
 
     std::vector<unsigned char> buffer;
     BinBufferWriterQueue& queue;
 public:
+    unsigned int buffer_pos=0;
     unsigned int total_super_kmers{0};
     unsigned int total_kmers{0};
     ExtendedKmerBin(uint16_t bin_no, uint8_t k, BinBufferWriterQueue& queue, unsigned int max_size);
 
     void store_superkmer(const Seq2bit &seq, unsigned int offset, unsigned int len);
 
+    bool empty() const {return buffer_pos==0;}
     void flush();
 };
 
