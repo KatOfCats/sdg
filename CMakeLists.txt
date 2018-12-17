@@ -184,6 +184,9 @@ add_library(bsg SHARED
             src/sglib/processors/GraphEditor.cc
             src/sglib/processors/GraphMaker.cc
             src/sglib/processors/LocalHaplotypeAssembler.cc
+            src/sglib/counter/ExtendedKmerBin.cc
+            src/sglib/counter/KmerCounter.cc
+            src/sglib/counter/Seq2bit.cc
             src/sglib/hash/xxhash.c
         )
 
@@ -211,6 +214,9 @@ add_library(bsg_static STATIC
         src/sglib/processors/GraphEditor.cc
         src/sglib/processors/GraphMaker.cc
         src/sglib/processors/LocalHaplotypeAssembler.cc
+        src/sglib/counter/ExtendedKmerBin.cc
+        src/sglib/counter/KmerCounter.cc
+        src/sglib/counter/Seq2bit.cc
         src/sglib/hash/xxhash.c
         )
 
@@ -257,6 +263,9 @@ add_executable(gfa-extract
 add_executable(bsg-dbg
         src/bsg-dbg.cc)
 
+add_executable(test-kmercounter
+        src/test_kmercounter.cc)
+
 target_link_libraries(bsg-workspace bsg_static)
 target_link_libraries(bsg-datastore bsg_static)
 target_link_libraries(bsg-kmerspectra bsg_static)
@@ -266,6 +275,7 @@ target_link_libraries(bsg-lhapassembler bsg_static ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(gfa-extract bsg_static)
 target_link_libraries(seq-thread bsg_static)
 target_link_libraries(bsg-dbg bsg_static)
+target_link_libraries(test-kmercounter bsg_static ${CMAKE_THREAD_LIBS_INIT})
 
 
 IF(BUILD_TESTING)
