@@ -158,7 +158,7 @@ void KmerCompressionIndex::add_counts_from_file(std::vector<std::string> filenam
     for (auto filename:filenames) {
         sglib::OutputLog(sglib::INFO) << "Counting from file: " << filename << std::endl;
         FastqReader<FastqRecord> fastqReader({0}, filename);
-        FastaReader<FastqRecord> fastaReader({0}, filename);
+        FastaReader<FastaRecord> fastaReader({0}, filename);
 
 #pragma omp parallel shared(fastqReader)
         {
@@ -179,7 +179,7 @@ void KmerCompressionIndex::add_counts_from_file(std::vector<std::string> filenam
                     c = fastqReader.next_record(read);
                 }
                 else {
-                    c = fastaReader.next_record(read);
+                    c = fastaReader.next_record(reada);
                 }
             }
             while (c) {
@@ -228,7 +228,7 @@ void KmerCompressionIndex::add_counts_from_file(std::vector<std::string> filenam
                         c = fastqReader.next_record(read);
                     }
                     else {
-                        c = fastaReader.next_record(read);
+                        c = fastaReader.next_record(reada);
                     }
                 }
             }
