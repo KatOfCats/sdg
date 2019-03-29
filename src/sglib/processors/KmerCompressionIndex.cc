@@ -146,7 +146,7 @@ void KmerCompressionIndex::start_new_count(){
     read_counts.back().resize(graph_kmers.size(),0);
 }
 
-void KmerCompressionIndex::add_counts_from_file(std::vector<std::string> filenames) {
+void KmerCompressionIndex::add_counts_from_file(std::vector<std::string> filenames, bool fastq) {
 
 
     uint64_t present(0), absent(0), rp(0);
@@ -158,6 +158,7 @@ void KmerCompressionIndex::add_counts_from_file(std::vector<std::string> filenam
     for (auto filename:filenames) {
         sglib::OutputLog(sglib::INFO) << "Counting from file: " << filename << std::endl;
         FastqReader<FastqRecord> fastqReader({0}, filename);
+        FastaReader<FastqRecord> fastaReader({0}, filename);
 
 #pragma omp parallel shared(fastqReader)
         {
@@ -166,19 +167,31 @@ void KmerCompressionIndex::add_counts_from_file(std::vector<std::string> filenam
             std::vector<uint64_t> found_kmers;
             found_kmers.reserve(local_kmers_size);
             FastqRecord read;
+            FastaRecord reada;
             std::vector<KmerCount> readkmers;
             KmerCountFactory<FastqRecord> kf({31});
+            KmerCountFactory<FastaRecord> kfa({31});
 
             bool c;
 #pragma omp critical(fastqreader)
             {
-                c = fastqReader.next_record(read);
+                if (fastq) {
+                    c = fastqReader.next_record(read);
+                }
+                else {
+                    c = fastaReader.next_record(read);
+                }
             }
             while (c) {
                 readkmers.clear();
-                kf.setFileRecord(read);
-                kf.next_element(readkmers);
-
+                if (fastq) {
+                    kf.setFileRecord(read);
+                    kf.next_element(readkmers);
+                }
+                else{
+                    kfa.setFileRecord(reada);
+                    kfa.next_element(readkmers);
+                }
                 for (auto &rk:readkmers) {
                     auto findk = kmer_map.find(rk.kmer);
                     if (kmer_map.end() != findk) {
@@ -210,7 +223,14 @@ void KmerCompressionIndex::add_counts_from_file(std::vector<std::string> filenam
                 }
                 ++thread_rp;
 #pragma omp critical(fastqreader)
-                c = fastqReader.next_record(read);
+                {
+                    if (fastq) {
+                        c = fastqReader.next_record(read);
+                    }
+                    else {
+                        c = fastaReader.next_record(read);
+                    }
+                }
             }
 
 #pragma omp critical(results_merge)
