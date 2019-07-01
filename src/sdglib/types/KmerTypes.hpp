@@ -166,11 +166,11 @@ struct MinPosIDX_hash{
 };
 struct kmerPos {
     kmerPos() = default;
-    kmerPos(uint64_t kmer, uint32_t contigID, int32_t offset) : kmer(kmer),
+    kmerPos(uint64_t kmer, sgNodeID_t contigID, int32_t offset) : kmer(kmer),
                                                                     contigID(contigID),pos(offset) {}
 
     uint64_t kmer = 0;
-    int32_t contigID = 0;
+    sgNodeID_t contigID = 0;
     uint32_t pos = 0;
 
     friend class byKmerContigOffset;

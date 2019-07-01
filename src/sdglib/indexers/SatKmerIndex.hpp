@@ -17,7 +17,7 @@ struct ContigPos {
     ContigPos() = default;
     ContigPos(uint32_t contigID, uint32_t pos) : contigID(contigID),pos(pos) {}
 
-    int32_t contigID = 0;
+    sgNodeID_t contigID = 0;
     uint32_t pos = 0;
 
     const bool operator==(const kmerPos &a) const { return std::tie(contigID, pos) == std::tie(a.contigID, a.pos);}

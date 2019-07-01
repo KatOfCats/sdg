@@ -181,12 +181,18 @@ void LongReadsMapper::get_sat_kmer_matches(std::vector<std::vector<std::pair<int
         auto start(sat_assembly_kmers.beginCO(read_kmers[i].second));
         auto end(sat_assembly_kmers.endCO(read_kmers[i].second));
         for (auto it = start; it < end; ++it) {
-            int32_t offset=sat_assembly_kmers.contig_pos[it].pos; //so far, this is +1 and the sign indicate direction of kmer in contig
+            int32_t pos=sat_assembly_kmers.contig_pos[it].pos; //so far, this is +1 and the sign indicate direction of kmer in contig
             sgNodeID_t node= sat_assembly_kmers.contig_pos[it].contigID; //so far, this is always positive
-            if (read_kmers[i].first != (node>0) ) {
-                node=-node;
+            if (node>0) {
+                if (!read_kmers[i].first) {
+                    node = -std::abs(node);
+                }
+            } else {
+                if (read_kmers[i].first) {
+                    node = -std::abs(node);
+                }
             }
-            matches[i].emplace_back(node, offset);
+            matches[i].emplace_back(node, pos);
         }
         if (matches[i].empty()) ++no_match; //DEBUG
         else if (matches[i].size()==1) ++single_match; //DEBUG
@@ -203,8 +209,14 @@ void LongReadsMapper::get_all_kmer_matches(std::vector<std::vector<std::pair<int
         for (auto it = first; it != assembly_kmers.end() && it->kmer == read_kmers[i].second; ++it) {
             int32_t pos=it->pos; //so far, this is +1 and the sign indicate direction of kmer in contig
             sgNodeID_t node=it->contigID; //so far, this is always positive
-            if (read_kmers[i].first != (node>0) ) {
-                node=-node;
+            if (node>0) {
+                if (!read_kmers[i].first) {
+                    node = -std::abs(node);
+                }
+            } else {
+                if (read_kmers[i].first) {
+                    node = -std::abs(node);
+                }
             }
             matches[i].emplace_back(node, pos);
         }
