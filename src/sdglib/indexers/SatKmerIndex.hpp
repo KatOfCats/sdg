@@ -13,23 +13,23 @@
 #include <sdglib/logger/OutputLog.hpp>
 
 class SequenceDistanceGraph;
-struct ContigOffset {
-    ContigOffset() = default;
-    ContigOffset(uint32_t contigID, int32_t offset) : contigID(contigID),offset(offset) {}
+struct ContigPos {
+    ContigPos() = default;
+    ContigPos(uint32_t contigID, uint32_t pos) : contigID(contigID),pos(pos) {}
 
     int32_t contigID = 0;
-    int32_t offset = 0;
+    uint32_t pos = 0;
 
-    const bool operator==(const kmerPos &a) const { return std::tie(contigID, offset) == std::tie(a.contigID, a.offset);}
+    const bool operator==(const kmerPos &a) const { return std::tie(contigID, pos) == std::tie(a.contigID, a.pos);}
 };
 
 class SatKmerIndex {
-    std::vector<std::vector<ContigOffset>> assembly_kmers;
+    std::vector<std::vector<ContigPos>> assembly_kmers;
     std::vector<uint64_t> kmerEnd;
     uint8_t k=15;
 public:
-    std::vector<ContigOffset> contig_offsets;
-    using const_iterator = std::vector<ContigOffset>::const_iterator;
+    std::vector<ContigPos> contig_pos;
+    using const_iterator = std::vector<ContigPos>::const_iterator;
 
     SatKmerIndex(){}
     explicit SatKmerIndex(uint8_t k) : k(k) {
@@ -45,7 +45,7 @@ public:
 #pragma omp parallel for reduction(+:num_kmers, num_elements)
         for (uint64_t kidx=0; kidx < assembly_kmers.size(); ++kidx) {
             if (assembly_kmers[kidx].size() >= max_kmer_repeat) {
-                std::vector<ContigOffset>().swap(assembly_kmers[kidx]);
+                std::vector<ContigPos>().swap(assembly_kmers[kidx]);
             }
             if (!assembly_kmers[kidx].empty()){num_kmers++; num_elements+=assembly_kmers[kidx].size();}
         }
@@ -75,7 +75,7 @@ public:
      * @param kmer Query kmer
      * @return
      */
-    const std::vector<ContigOffset> & find(const uint64_t kmer) const {
+    const std::vector<ContigPos> & find(const uint64_t kmer) const {
         return assembly_kmers[kmer];
     }
 };

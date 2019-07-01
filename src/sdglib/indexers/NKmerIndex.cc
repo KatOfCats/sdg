@@ -27,7 +27,7 @@ void NKmerIndex::generate_index(const SequenceDistanceGraph &sg, int filter_limi
                 skf.create_kmers(sg.nodes[n].sequence, contig_kmers);
                 int k_i(0);
                 for (const auto &kmer:contig_kmers) {
-                    local_kmers.emplace_back(kmer.second, n, kmer.first ? k_i + 1 : -(k_i + 1));
+                    local_kmers.emplace_back(kmer.second, kmer.first ? n : -n, k_i);
                     k_i++;
                 }
             }
@@ -50,7 +50,7 @@ void NKmerIndex::generate_index(const SequenceDistanceGraph &sg, int filter_limi
     }
 
 
-    sdglib::sort(assembly_kmers.begin(),assembly_kmers.end(), kmerPos::byKmerContigOffset());
+    sdglib::sort(assembly_kmers.begin(),assembly_kmers.end(), kmerPos::byKmerContigPos());
 
     if (verbose) sdglib::OutputLog() << "Filtering kmers appearing less than " << filter_limit << " from " << assembly_kmers.size() << " initial kmers" << std::endl;
     auto total_kmers(filter_kmers(assembly_kmers, filter_limit));

@@ -10,7 +10,7 @@ void SatKmerIndex::generate_index(const SequenceDistanceGraph &sg, uint8_t filte
     // This two-pass approach could be easily adapted to a single memory block rather than vector of vectors
     uint64_t indexed_positions(0),filtered_kmers(0),total_kmers(0);
     //---- First Step, count k-mer occupancy ----//
-    if (verbose) sdglib::OutputLog() << "First pass: Generating {kmer,contig,offset} " <<std::endl;
+    if (verbose) sdglib::OutputLog() << "First pass: Generating {kmer,contig,pos} " <<std::endl;
     kmerEnd.resize(std::pow(4,k));
     std::vector<kmerPos> all_kmers;
     all_kmers.reserve(100000000);
@@ -23,7 +23,7 @@ void SatKmerIndex::generate_index(const SequenceDistanceGraph &sg, uint8_t filte
             skf.create_kmers(sg.nodes[n].sequence, contig_kmers);
             int k_i(0);
             for (const auto &kmer:contig_kmers) {
-                all_kmers.emplace_back(kmer.second, n, kmer.first ? k_i + 1 : -(k_i + 1));
+                all_kmers.emplace_back(kmer.second, kmer.first ? n : -n, k_i);
                 k_i++;
             }
             total_kmers+=contig_kmers.size();
@@ -31,7 +31,7 @@ void SatKmerIndex::generate_index(const SequenceDistanceGraph &sg, uint8_t filte
     }
     //---- Second Step, reserve space for each vector in structure (avoiding reallocations and such)----//
     if (verbose) sdglib::OutputLog() << "Sorting, linearising structure and saving positions" << std::endl;
-    sdglib::sort(all_kmers.begin(), all_kmers.end(), kmerPos::byKmerContigOffset());
+    sdglib::sort(all_kmers.begin(), all_kmers.end(), kmerPos::byKmerContigPos());
     assembly_kmers.clear();
 
     if (verbose) sdglib::OutputLog() << "Filtering kmers appearing less than " << filter_limit << " from " << total_kmers << " initial kmers" << std::endl;
@@ -52,7 +52,7 @@ void SatKmerIndex::generate_index(const SequenceDistanceGraph &sg, uint8_t filte
             filtered_kmers+=1;
             kmerEnd[ckmer] += ritr-bitr;
             while (bitr != ritr) {
-                contig_offsets.emplace_back(bitr->contigID, bitr->offset);
+                contig_pos.emplace_back(bitr->contigID, bitr->pos);
                 ++witr;
                 ++bitr;
             }
@@ -62,10 +62,10 @@ void SatKmerIndex::generate_index(const SequenceDistanceGraph &sg, uint8_t filte
         ++ckmer;
         kmerEnd[ckmer] = kmerEnd[ckmer-1];
     }
-    assert(kmerEnd[std::pow(4,k)-1] == contig_offsets.size());
+    assert(kmerEnd[std::pow(4,k)-1] == contig_pos.size());
     std::vector<kmerPos>().swap(all_kmers);
     if (verbose) sdglib::OutputLog() << "Kmers for mapping " << filtered_kmers << std::endl;
-    if (verbose) sdglib::OutputLog() << "Elements in structure " << contig_offsets.size() << std::endl;
+    if (verbose) sdglib::OutputLog() << "Elements in structure " << contig_pos.size() << std::endl;
     if (verbose) sdglib::OutputLog() << "DONE" << std::endl;
 
 }

@@ -181,13 +181,11 @@ void LongReadsMapper::get_sat_kmer_matches(std::vector<std::vector<std::pair<int
         auto start(sat_assembly_kmers.beginCO(read_kmers[i].second));
         auto end(sat_assembly_kmers.endCO(read_kmers[i].second));
         for (auto it = start; it < end; ++it) {
-            int32_t offset=sat_assembly_kmers.contig_offsets[it].offset; //so far, this is +1 and the sign indicate direction of kmer in contig
-            sgNodeID_t node= sat_assembly_kmers.contig_offsets[it].contigID; //so far, this is always positive
-            if (read_kmers[i].first != (offset>0) ) {
+            int32_t offset=sat_assembly_kmers.contig_pos[it].pos; //so far, this is +1 and the sign indicate direction of kmer in contig
+            sgNodeID_t node= sat_assembly_kmers.contig_pos[it].contigID; //so far, this is always positive
+            if (read_kmers[i].first != (node>0) ) {
                 node=-node;
-                offset=( (int) sg.nodes[std::llabs(sat_assembly_kmers.contig_offsets[it].contigID)].sequence.size() ) - std::abs(offset);
             }
-            else offset=std::abs(offset)-1;
             matches[i].emplace_back(node, offset);
         }
         if (matches[i].empty()) ++no_match; //DEBUG
@@ -203,14 +201,12 @@ void LongReadsMapper::get_all_kmer_matches(std::vector<std::vector<std::pair<int
         matches[i].clear();
         auto first = assembly_kmers.find(read_kmers[i].second);
         for (auto it = first; it != assembly_kmers.end() && it->kmer == read_kmers[i].second; ++it) {
-            int32_t offset=it->offset; //so far, this is +1 and the sign indicate direction of kmer in contig
+            int32_t pos=it->pos; //so far, this is +1 and the sign indicate direction of kmer in contig
             sgNodeID_t node=it->contigID; //so far, this is always positive
-            if (read_kmers[i].first != (offset>0) ) {
+            if (read_kmers[i].first != (node>0) ) {
                 node=-node;
-                offset=( (int) sg.nodes[std::llabs(it->contigID)].sequence.size() ) - std::abs(offset);
             }
-            else offset=std::abs(offset)-1;
-            matches[i].emplace_back(node, offset);
+            matches[i].emplace_back(node, pos);
         }
         if (matches[i].empty()) ++no_match; //DEBUG
         else if (matches[i].size()==1) ++single_match; //DEBUG
@@ -352,7 +348,7 @@ void LongReadsMapper::map_reads(int filter_limit, const std::unordered_set<uint3
 
         auto & private_results=thread_mappings[omp_get_thread_num()];
         ReadSequenceBuffer sequenceGetter(datastore);
-        std::vector<std::vector<std::pair<int32_t, int32_t>>> node_matches; //node, offset
+        std::vector<std::vector<std::pair<int32_t, int32_t>>> node_matches; //node, pos
         const char * query_sequence_ptr;
 
         std::vector<unsigned char> candidate_counts(sg.nodes.size()*2);
@@ -426,7 +422,7 @@ std::vector<LongReadMapping> LongReadsMapper::map_sequence(const char * query_se
 
     StreamKmerFactory skf(k);
     std::vector<std::pair<bool, uint64_t>> read_kmers;
-    std::vector<std::vector<std::pair<int32_t, int32_t>>> node_matches; //node, offset
+    std::vector<std::vector<std::pair<int32_t, int32_t>>> node_matches; //node, pos
     read_kmers.clear();
 
     std::vector<unsigned char> candidate_counts(sg.nodes.size()*2);

@@ -167,25 +167,22 @@ struct MinPosIDX_hash{
 struct kmerPos {
     kmerPos() = default;
     kmerPos(uint64_t kmer, uint32_t contigID, int32_t offset) : kmer(kmer),
-                                                                    contigID(contigID),offset(offset) {}
+                                                                    contigID(contigID),pos(offset) {}
 
     uint64_t kmer = 0;
     int32_t contigID = 0;
-    int32_t offset = 0;
+    uint32_t pos = 0;
 
     friend class byKmerContigOffset;
 
-    struct byKmerContigOffset {
+    struct byKmerContigPos {
         bool operator()(const kmerPos &a, const kmerPos &b) {
-            auto a_off(std::abs(a.offset));
-            auto b_off(std::abs(b.offset));
-//            return std::tie(a.kmer, a.contigID) < std::tie(b.kmer, b.contigID);
-            return std::tie(a.kmer, a.contigID, a_off) < std::tie(b.kmer, b.contigID, b_off);
+            return std::tie(a.kmer, a.contigID, a.pos) < std::tie(b.kmer, b.contigID, b.pos);
         }
     };
 
     inline bool operator<(uint32_t const &rhs) const { return kmer < rhs; }
-    const bool operator==(const kmerPos &a) const { return std::tie(kmer, contigID, offset) == std::tie(a.kmer, a.contigID, a.offset);}
+    const bool operator==(const kmerPos &a) const { return std::tie(kmer, contigID, pos) == std::tie(a.kmer, a.contigID, a.pos);}
 };
 
 #endif //BSG_KMERTYPES_HPP
