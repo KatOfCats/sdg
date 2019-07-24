@@ -1,0 +1,304 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>SDG &mdash; SDG  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="sdglib" href="sdglib/README.html" />
+    <link rel="prev" title="Welcome to SDG’s documentation!" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> SDG
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">SDG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#warning">WARNING</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#usage">Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#command-line-tools">Command line tools</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#sdg-datastore">sdg-datastore</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sdg-workspace">sdg-workspace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sdg-mapper">sdg-mapper</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sdg-dbg">sdg-dbg</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#python-module-examples">Python module examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-1-short-and-long-read-hybrid-assembly-scaffolding">Example #1: short and long read hybrid assembly/scaffolding</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-2-phasing-a-trio-child-genome-using-k-mer-counts">Example #2: phasing a trio child genome using k-mer counts</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sdglib/README.html">sdglib</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sdglib/workspace/README.html">Workspace</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_sdglib_toc.html">Classes sdglib</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">SDG</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>SDG</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/sdg/README.md.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <p><a class="reference external" href="https://github.com/bioinfologics/bsg/blob/master/LICENSE"><img alt="https://img.shields.io/badge/license-MIT-green.svg" src="https://img.shields.io/badge/license-MIT-green.svg" /></a>
+<a class="reference external" href="https://codecov.io/gh/bioinfologics/sdg"><img alt="https://codecov.io/gh/bioinfologics/sdg/branch/master/graph/badge.svg" src="https://codecov.io/gh/bioinfologics/sdg/branch/master/graph/badge.svg" /></a>
+<a class="reference external" href="https://travis-ci.org/bioinfologics/sdg"><img alt="https://travis-ci.org/bioinfologics/sdg.svg?branch=master" src="https://travis-ci.org/bioinfologics/sdg.svg?branch=master" /></a></p>
+<div class="section" id="sdg">
+<h1>SDG<a class="headerlink" href="#sdg" title="Permalink to this headline">¶</a></h1>
+<p>The <strong>S</strong>equence <strong>D</strong>istance <strong>G</strong>raph is a framework to work with genome graphs and sequencing data. It provides a workspace build around a Sequence Distance Graph, datastores for paired, linked and long reads, read mappers, and k-mer counters. It can be used to perform different types of sequence analyses.</p>
+<p>SDG can be used as a Python module through its SWIG API. R and Julia support are experimental and should not be used at this stage.</p>
+<p>The documentation is severily lacking right now. We’re working on it. There is <a class="reference external" href="https://bioinfologics.github.io/sdg/">SDG API documentation</a>, although again it is lacking right now.</p>
+</div>
+<div class="section" id="warning">
+<h1>WARNING<a class="headerlink" href="#warning" title="Permalink to this headline">¶</a></h1>
+<p><strong>SDG is undergoing major changes right now preparing for v1. Please come back in a few weeks for serious usage.</strong></p>
+</div>
+<div class="section" id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+</div>
+<div class="section" id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="command-line-tools">
+<h2>Command line tools<a class="headerlink" href="#command-line-tools" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="sdg-datastore">
+<h3>sdg-datastore<a class="headerlink" href="#sdg-datastore" title="Permalink to this headline">¶</a></h3>
+<p>Tool to create datastores from raw reads. It also creates a special type of datastore: the KmerCounts, which computes frequency of k-mers from a read set. Since the k-mers are only counted if they appear in a WorkSpace’s SequenceDistanceGraph, you will need a workspace to create a KmerCounts.</p>
+</div>
+<div class="section" id="sdg-workspace">
+<h3>sdg-workspace<a class="headerlink" href="#sdg-workspace" title="Permalink to this headline">¶</a></h3>
+<p>Tool to create and modify WorSpaces. The WorkSpaces bind together a SequenceDistanceGraph, aditional DistanceGraphs defined over its nodes, read datastores (and their mappings) and k-mer count datastores. You will normally use WorkSpaces to save intermediate status of pipelines and such.</p>
+</div>
+<div class="section" id="sdg-mapper">
+<h3>sdg-mapper<a class="headerlink" href="#sdg-mapper" title="Permalink to this headline">¶</a></h3>
+<p>A simple tool to map reads to the SequenceDistanceGraph within a Workspace.</p>
+</div>
+<div class="section" id="sdg-dbg">
+<h3>sdg-dbg<a class="headerlink" href="#sdg-dbg" title="Permalink to this headline">¶</a></h3>
+<p>This tool takes a read datastore as input and constructs a DBG, then maps the reads back to it, creates a k-mer count and writes down a neat WorkSpace with all this.</p>
+</div>
+</div>
+<div class="section" id="python-module-examples">
+<h2>Python module examples<a class="headerlink" href="#python-module-examples" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="example-1-short-and-long-read-hybrid-assembly-scaffolding">
+<h3>Example #1: short and long read hybrid assembly/scaffolding<a class="headerlink" href="#example-1-short-and-long-read-hybrid-assembly-scaffolding" title="Permalink to this headline">¶</a></h3>
+<p>For this example, you need to first have both the illumina and pacbio reads in datastores, and then create a starting WorkSpace with the DBG of the read sequences:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sdg-datastore make -t paired -o ecoli_pe -1 ../ecoli_pe_r1.fastq -2 ../ecoli_pe_r2.fastq -s <span class="m">301</span>
+sdg-datastore make -t long -o ecoli_pb -L ../ecoli_pb_all.fastq
+sdg-dbg -p ecoli_pe.prseq -o ecoli_assm
+</pre></div>
+</div>
+<p>Now the long reads datastore can be added, the reads mapped, the linkage created, and the repeats eliminated, to create a scaffolded assembly that will contain only the non-repetitive nodes with mappings from the original DBG:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pysdg</span> <span class="kn">as</span> <span class="nn">sdg</span>
+
+<span class="c1"># Load sdg-dbg&#39;s workspace from disk, add the pacbio datastore</span>
+<span class="n">ws</span><span class="o">=</span><span class="n">sdg</span><span class="o">.</span><span class="n">WorkSpace</span><span class="p">(</span><span class="s1">&#39;ecoli_assm.bsgws&#39;</span><span class="p">)</span>
+<span class="n">ws</span><span class="o">.</span><span class="n">long_read_datastores</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">sdg</span><span class="o">.</span><span class="n">LongReadsDatastore</span><span class="p">(</span><span class="n">ws</span><span class="p">,</span><span class="s1">&#39;ecoli_pb.loseq&#39;</span><span class="p">))</span>
+
+<span class="c1"># Map long reads, filter by 10% id, pick best matches and rechain</span>
+<span class="n">lds</span><span class="o">=</span><span class="n">ws</span><span class="o">.</span><span class="n">long_read_datastores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">lds</span><span class="o">.</span><span class="n">mapper</span><span class="o">.</span><span class="n">k</span><span class="o">=</span><span class="mi">11</span>
+<span class="n">lds</span><span class="o">.</span><span class="n">mapper</span><span class="o">.</span><span class="n">map_reads</span><span class="p">()</span>
+<span class="n">lds</span><span class="o">.</span><span class="n">mapper</span><span class="o">.</span><span class="n">filter_mappings_by_size_and_id</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">lds</span><span class="o">.</span><span class="n">mapper</span><span class="o">.</span><span class="n">improve_filtered_mappings</span><span class="p">()</span>
+
+<span class="c1"># Create a LinkageUntangler, with linkage from the mapped long reads</span>
+<span class="n">u</span><span class="o">=</span><span class="n">sdg</span><span class="o">.</span><span class="n">LinkageUntangler</span><span class="p">(</span><span class="n">ws</span><span class="p">)</span>
+<span class="n">lr_mldg</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">make_longRead_multilinkage</span><span class="p">(</span><span class="n">lds</span><span class="o">.</span><span class="n">mapper</span><span class="p">)</span>
+
+<span class="c1"># Select large nodes, any CI, create linkage between 1st neighbours on selection</span>
+<span class="n">u</span><span class="o">.</span><span class="n">select_nodes_by_size_and_ci</span><span class="p">(</span><span class="mi">1100</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">nsl</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">make_nextselected_linkage</span><span class="p">(</span><span class="n">lr_mldg</span><span class="p">)</span>
+<span class="n">nsl</span><span class="o">.</span><span class="n">write_to_gfa</span><span class="p">(</span><span class="s1">&#39;lr_scaffolded_with_repeats.gfa&#39;</span><span class="p">)</span>
+
+<span class="c1"># Deselect nodes with many inputs or outputs (repeats), create linkage with no repeats</span>
+<span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ws</span><span class="o">.</span><span class="n">sdg</span><span class="o">.</span><span class="n">nodes</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="n">u</span><span class="o">.</span><span class="n">selected_nodes</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="ow">and</span> <span class="p">(</span> <span class="nb">len</span><span class="p">(</span><span class="n">nsl</span><span class="o">.</span><span class="n">get_bw_links</span><span class="p">(</span><span class="n">n</span><span class="p">))</span><span class="o">&gt;</span><span class="mi">1</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">nsl</span><span class="o">.</span><span class="n">get_fw_links</span><span class="p">(</span><span class="n">n</span><span class="p">))</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">):</span>
+      <span class="n">u</span><span class="o">.</span><span class="n">selected_nodes</span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="o">=</span><span class="bp">False</span>
+<span class="n">nsl_nr</span><span class="o">=</span><span class="n">u</span><span class="o">.</span><span class="n">make_nextselected_linkage</span><span class="p">(</span><span class="n">lr_mldg</span><span class="p">)</span>
+<span class="n">nsl_nr</span><span class="o">.</span><span class="n">write_to_gfa1</span><span class="p">(</span><span class="s1">&#39;lr_scaffolded_no_repeats.gfa&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="example-2-phasing-a-trio-child-genome-using-k-mer-counts">
+<h3>Example #2: phasing a trio child genome using k-mer counts<a class="headerlink" href="#example-2-phasing-a-trio-child-genome-using-k-mer-counts" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="sdglib/README.html" class="btn btn-neutral float-right" title="sdglib" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../index.html" class="btn btn-neutral float-left" title="Welcome to SDG’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Bernardo J. Clavijo, Gonzalo Garcia, Luis J. Yanes, Benjamin Ward
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
