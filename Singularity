@@ -34,6 +34,12 @@ apt-get install cmake
 # Install python3
 apt-get install python3
 
+#Install doxygen
+apt-get install doxygen
+
+#Install swig
+apt-get install swig-4.0.0
+
 # Install sdg
 \begin{python}
 git clone https://github.com/bioinfologics/sdg
