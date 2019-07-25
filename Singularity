@@ -36,13 +36,13 @@ export PATH="`pwd`/cmake-3.4.1-Linux-x86_64/bin:$PATH"
 rm -rf cmake-3.4.1-Linux-x86_64.tar.gz
 
 # Install python3
-apt-get install python3
+apt-get install -y python3
 
 #Install doxygen
-apt-get install doxygen
+apt-get install -y doxygen
 
 #Install swig
-apt-get install swig-4.0.0
+apt-get install -y swig-4.0.0
 
 # Install sdg
 \begin{python}
