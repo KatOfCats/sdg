@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: gcc:6
+From: gcc:8
 IncludeCmd: yes
 
 %setup
@@ -45,7 +45,7 @@ apt-get install -y doxygen
 apt-get install -y swig-4.0.0
 
 # Install sdg
-\begin{python}
+#\begin{python}
 git clone https://github.com/bioinfologics/sdg
 cd sdg
 mkdir build
@@ -53,4 +53,4 @@ cd build
 cmake -DBUILD_PYTHON_INTERFACE=ON ../
 make
 make install
-\end{python}
+#\end{python}
