@@ -44,6 +44,9 @@ apt-get install -y doxygen
 #Install swig
 apt-get install -y swig
 
+#Install other
+apt-get install -y apt-utils
+
 # Install sdg
 #\begin{python}
 git clone https://github.com/bioinfologics/sdg
