@@ -42,7 +42,7 @@ apt-get install -y python3
 apt-get install -y doxygen
 
 #Install swig
-apt-get install -y swig-4.0.0
+apt-get install -y swig
 
 # Install sdg
 #\begin{python}
