@@ -36,7 +36,7 @@ export PATH="`pwd`/cmake-3.4.1-Linux-x86_64/bin:$PATH"
 rm -rf cmake-3.4.1-Linux-x86_64.tar.gz
 
 #Install other
-apt-get install -y apt-utils
+apt-get update && apt-get install -y --no-install-recommends apt-utils
 
 # Install python3
 apt-get install -y python3
