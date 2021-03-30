@@ -30,10 +30,14 @@ apt-get update -y  && apt-get upgrade -y
 
 # install cmake
 cd /usr/local/
-wget https://cmake.org/files/v3.4/cmake-3.4.1-Linux-x86_64.tar.gz
-tar xvf cmake-3.4.1-Linux-x86_64.tar.gz
-export PATH="`pwd`/cmake-3.4.1-Linux-x86_64/bin:$PATH"
-rm -rf cmake-3.4.1-Linux-x86_64.tar.gz
+#wget https://cmake.org/files/v3.4/cmake-3.4.1-Linux-x86_64.tar.gz
+#tar xvf cmake-3.4.1-Linux-x86_64.tar.gz
+#export PATH="`pwd`/cmake-3.4.1-Linux-x86_64/bin:$PATH"
+#rm -rf cmake-3.4.1-Linux-x86_64.tar.gz
+wget https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0.tar.gz
+tar xvf cmake-3.20.0.tar.gz
+export PATH="`pwd`/cmake-3.20.0/bin:$PATH"
+rm -rf cmake-3.20.0.tar.gz
 
 #Install other
 apt-get install libidn11
