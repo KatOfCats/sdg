@@ -34,11 +34,11 @@ apt-get update -y  && apt-get upgrade -y
 #tar xvf cmake-3.4.1-Linux-x86_64.tar.gz
 #export PATH="`pwd`/cmake-3.4.1-Linux-x86_64/bin:$PATH"
 #rm -rf cmake-3.4.1-Linux-x86_64.tar.gz
-
+apt-get install build-essential libssl-dev
 wget https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0.tar.gz
 tar xvf cmake-3.20.0.tar.gz
-cd cmake-3.20.0/source
-./bootstrap && make && sudo make install
+cd cmake-3.20.0
+./bootstrap && make && make install
 export PATH="`pwd`/cmake-3.20.0/bin:$PATH"
 cd ../../
 rm -rf cmake-3.20.0.tar.gz
