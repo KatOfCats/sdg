@@ -36,6 +36,8 @@ cd /usr/local/
 #rm -rf cmake-3.4.1-Linux-x86_64.tar.gz
 wget https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0.tar.gz
 tar xvf cmake-3.20.0.tar.gz
+cd source
+./bootstrap && make && sudo make install
 export PATH="`pwd`/cmake-3.20.0/bin:$PATH"
 rm -rf cmake-3.20.0.tar.gz
 
