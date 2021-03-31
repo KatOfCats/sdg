@@ -48,8 +48,8 @@ apt-get install -y libidn11
 
 
 # Install python3
-apt-get install -y python3
-apt-get install -y python3-dev
+apt-get install -y python3.9
+apt-get install -y python3.9-dev
 
 #Install doxygen
 apt-get install -y doxygen
