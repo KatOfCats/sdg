@@ -45,10 +45,12 @@ rm -rf cmake-3.20.0.tar.gz
 
 #Install other
 apt-get install -y libidn11
-apt-get install -y python3-dev
+
 
 # Install python3
 apt-get install -y python3
+apt-get install -y python3-dev
+apt-get install -y python-dev
 
 #Install doxygen
 apt-get install -y doxygen
