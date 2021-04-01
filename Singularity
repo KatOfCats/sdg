@@ -48,6 +48,8 @@ apt-get install -y libidn11
 
 
 # Install python3
+apt install -y software-properties-common
+add-apt-repository -y ppa:deadsnakes/ppa
 apt-get install -y python3.9
 apt-get install -y python3.9-dev
 
