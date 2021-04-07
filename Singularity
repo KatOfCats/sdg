@@ -1,6 +1,6 @@
 Bootstrap: docker
 #From: gcc:8
-From: python
+From: python:3.5
 IncludeCmd: yes
 
 %setup
@@ -58,7 +58,8 @@ apt-get install -y clang
 #apt install -y software-properties-common
 #add-apt-repository -y ppa:deadsnakes/ppa
 #apt-get install -y python3
-apt-get install -y python3-dev
+apt-get install -y python3.5-dev
+apt-get install -y python3.5-devel
 
 #Install doxygen
 apt-get install -y doxygen
