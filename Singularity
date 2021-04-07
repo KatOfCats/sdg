@@ -38,6 +38,7 @@ apt-get update -y  && apt-get upgrade -y
 #tar xvf cmake-3.4.1-Linux-x86_64.tar.gz
 #export PATH="`pwd`/cmake-3.4.1-Linux-x86_64/bin:$PATH"
 #rm -rf cmake-3.4.1-Linux-x86_64.tar.gz
+
 apt-get install -y build-essential libssl-dev
 wget https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0.tar.gz
 tar xvf cmake-3.20.0.tar.gz
@@ -72,8 +73,8 @@ cd sdg
 git checkout bj
 mkdir build
 cd build
-export CC=/usr/local/opt/llvm/bin/clang
-export CXX=/usr/local/opt/llvm/bin/clang++
+export CC=clang
+export CXX=clang++
 
 cmake -DBUILD_SIMPLE_PYTHON_INTERFACE=on -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")  -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))") ../
 
