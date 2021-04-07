@@ -50,7 +50,7 @@ rm -rf cmake-3.20.0.tar.gz
 #Install other
 apt-get install -y libidn11
 apt-get install -y llvm 
-apt-get install -y libomp
+apt-get install -y libomp-dev
 apt-get install -y clang
 
 # Install python3
