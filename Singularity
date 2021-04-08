@@ -30,7 +30,7 @@ IncludeCmd: yes
 apt-get update -y  && apt-get upgrade -y
 
 #install gcc
-#apt-get install -y gcc
+apt-get install -y gcc
 
 # install cmake
 #cd /usr/local/
@@ -52,14 +52,14 @@ rm -rf cmake-3.20.0.tar.gz
 apt-get install -y libidn11
 apt-get install -y llvm 
 apt-get install -y libomp-dev
-apt-get install -y clang
+#apt-get install -y clang
 
 # Install python3
 #apt install -y software-properties-common
 #add-apt-repository -y ppa:deadsnakes/ppa
 #apt-get install -y python3
-apt-get install -y python3.5-dev
-apt-get install -y python3.5-devel
+#apt-get install -y python3.5-dev
+#apt-get install -y python3.5-devel
 
 #Install doxygen
 apt-get install -y doxygen
@@ -74,8 +74,8 @@ cd sdg
 git checkout bj
 mkdir build
 cd build
-export CC=clang
-export CXX=clang++
+#export CC=clang
+#export CXX=clang++
 
 cmake -DBUILD_SIMPLE_PYTHON_INTERFACE=on -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")  -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))") ../
 
